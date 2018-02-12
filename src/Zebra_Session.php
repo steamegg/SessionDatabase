@@ -1,4 +1,5 @@
 <?php
+namespace steamegg\Slim\SessionMysql;
 
 /**
  *  A PHP library acting as a drop-in replacement for PHP's default session handler, but instead of storing session data

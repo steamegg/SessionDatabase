@@ -1,9 +1,9 @@
 {
-    "name": "stefangabos/zebra_session",
+    "name": "steamegg/Slim-SessionMysql",
     "type": "library",
     "description": "A PHP library acting as a wrapper for PHP's default session handling functions which stores data in a MySQL database, providing both better performance and better security and protection against session fixation and session hijacking.",
     "keywords": ["session", "locking", "flash", "flashdata", "fixation", "hijack", "mysqli", "mysql", "database"],
-    "homepage": "https://github.com/stefangabos/Zebra_Session",
+    "homepage": "https://github.com/steamegg/Slim-SessionMysql",
     "license": "LGPL-3.0",
     "authors": [
         {
@@ -11,14 +11,15 @@
             "email": "contact@stefangabos.ro",
             "homepage": "https://github.com/stefangabos",
             "role": "Developer"
+        },
+        {
+            "name": "steamegg"
         }
     ],
     "require": {
-        "php": ">=5.1.0"
+        "php": ">=5.5.0"
     },
     "autoload": {
-        "classmap": [
-            "Zebra_Session.php"
-        ]
+        "psr-4": {"steamegg\\Slim\\SessionMysql\\": "src"}
     }
 }
