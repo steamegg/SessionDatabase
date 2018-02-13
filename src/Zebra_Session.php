@@ -321,40 +321,6 @@ class Zebra_Session {
 	}
 
 	/**
-	 *  Get the number of active sessions - sessions that have not expired.
-	 *
-	 *  <i>The returned value does not represent the exact number of active users as some sessions may be unused
-	 *  although they haven't expired.</i>
-	 *
-	 *  <code>
-	 *  // first, connect to a database containing the sessions table
-	 *
-	 *  //  include the class
-	 *  require 'path/to/Zebra_Session.php';
-	 *
-	 *  //  start the session
-	 *  //  where $link is a connection link returned by mysqli_connect
-	 *  $session = new Zebra_Session($link, 'sEcUr1tY_c0dE');
-	 *
-	 *  //  get the (approximate) number of active sessions
-	 *  $active_sessions = $session->get_active_sessions();
-	 *  </code>
-	 *
-	 *  @return integer	 Returns the number of active (not expired) sessions.
-	 */
-	public function get_active_sessions() {
-		// call the garbage collector
-		$this->gc();
-
-		// count the rows from the database
-		$sql = sprintf('SELECT COUNT(session_id) as count FROM %s', $this->table_name);
-		$result = mysqli_fetch_assoc($this->_mysql_query($sql));
-
-		// return the number of found rows
-		return $result['count'];
-	}
-
-	/**
 	 *  Custom open() function
 	 *
 	 *  @access private
