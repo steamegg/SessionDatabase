@@ -418,47 +418,6 @@ class Zebra_Session {
 	}
 
 	/**
-	 *  Deletes all data related to the session.
-	 *
-	 *  <i>This method runs the garbage collector respecting your environment's garbage collector-related properties.
-	 *  Read {@link __construct() here} for more information.</i>
-	 *
-	 *  <code>
-	 *  // first, connect to a database containing the sessions table
-	 *
-	 *  //  include the class
-	 *  require 'path/to/Zebra_Session.php';
-	 *
-	 *  //  start the session
-	 *  //  where $link is a connection link returned by mysqli_connect
-	 *  $session = new Zebra_Session($link, 'sEcUr1tY_c0dE');
-	 *
-	 *  //  end current session
-	 *  $session->stop();
-	 *  </code>
-	 *
-	 *  @since 1.0.1
-	 *
-	 *  @return void
-	 */
-	public function stop() {
-		// if a cookie is used to pass the session id
-		if (ini_get('session.use_cookies')) {
-
-			// get session cookie's properties
-			$params = session_get_cookie_params();
-
-			// unset the cookie
-			setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
-
-		}
-
-		// destroy the session
-		session_unset();
-		session_destroy();
-	}
-
-	/**
 	 *  Custom write() function
 	 *
 	 *  @access private
