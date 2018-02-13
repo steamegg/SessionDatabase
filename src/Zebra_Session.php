@@ -303,13 +303,10 @@ class Zebra_Session {
 	 *  @access private
 	 */
 	function close() {
-
 		// release the lock associated with the current session
-		if ($this->_mysql_query('SELECT RELEASE_LOCK("' . $this->session_lock . '")'))
-
-			// and return true if it was successful
+		$sql = sprintf('SELECT RELEASE_LOCK("%s")', $this->session_lock);
+		if ($this->_mysql_query($sql))
 			return true;
-
 	}
 
 	/**
@@ -318,16 +315,9 @@ class Zebra_Session {
 	 *  @access private
 	 */
 	function destroy($session_id) {
-
 		// delete the current session id from the database
-		$this->_mysql_query('
-
-			DELETE FROM
-				' . $this->table_name . '
-			WHERE
-				session_id = "' . $this->_mysql_real_escape_string($session_id) . '"
-
-		');
+		$sql = sprintf('DELETE FROM %s WHERE session_id = "%s"', $this->table_name, $this->_mysql_real_escape_string($session_id));
+		$this->_mysql_query($sql);
 
 		// return true if everything went well
 		return ($this->_mysql_affected_rows() !== -1);
@@ -340,17 +330,9 @@ class Zebra_Session {
 	 *  @access private
 	 */
 	function gc() {
-
 		// delete expired sessions from database
-		$this->_mysql_query('
-
-			DELETE FROM
-				' . $this->table_name . '
-			WHERE
-				session_expire < "' . $this->_mysql_real_escape_string(time()) . '"
-
-		');
-
+		$sql = sprintf('DELETE FROM %s WHERE session_expire < "%s"', $this->table_name, $this->_mysql_real_escape_string(time()));
+		$this->_mysql_query($sql);
 	}
 
 	/**
@@ -376,22 +358,15 @@ class Zebra_Session {
 	 *  @return integer	 Returns the number of active (not expired) sessions.
 	 */
 	public function get_active_sessions() {
-
 		// call the garbage collector
 		$this->gc();
 
 		// count the rows from the database
-		$result = mysqli_fetch_assoc($this->_mysql_query('
-
-			SELECT
-				COUNT(session_id) as count
-			FROM ' . $this->table_name . '
-
-		'));
+		$sql = sprintf('SELECT COUNT(session_id) as count FROM %s', $this->table_name);
+		$result = mysqli_fetch_assoc($this->_mysql_query($sql));
 
 		// return the number of found rows
 		return $result['count'];
-
 	}
 
 	/**
@@ -427,7 +402,6 @@ class Zebra_Session {
 	 *
 	 */
 	public function get_settings() {
-
 		// get the settings
 		$gc_maxlifetime = ini_get('session.gc_maxlifetime');
 		$gc_probability = ini_get('session.gc_probability');
@@ -440,7 +414,6 @@ class Zebra_Session {
 			'session.gc_divisor'		=>  $gc_divisor,
 			'probability'			   =>  $gc_probability / $gc_divisor * 100 . '%',
 		);
-
 	}
 
 	/**
@@ -449,9 +422,7 @@ class Zebra_Session {
 	 *  @access private
 	 */
 	function open() {
-
 		return true;
-
 	}
 
 	/**
@@ -460,12 +431,12 @@ class Zebra_Session {
 	 *  @access private
 	 */
 	function read($session_id) {
-
 		// get the lock name, associated with the current session
 		$this->session_lock = $this->_mysql_real_escape_string('session_' . $session_id);
 
 		// try to obtain a lock with the given name and timeout
-		$result = $this->_mysql_query('SELECT GET_LOCK("' . $this->session_lock . '", ' . $this->_mysql_real_escape_string($this->lock_timeout) . ')');
+		$sql = sprintf('SELECT GET_LOCK("%s", %s)', $this->session_lock, $this->_mysql_real_escape_string($this->lock_timeout));
+		$result = $this->_mysql_query($sql);
 
 		// stop if there was an error
 		if (!$result || mysqli_num_rows($result) != 1 || !($row = mysqli_fetch_array($result)) || $row[0] != 1) die('Zebra_Session: Could not obtain session lock!');
@@ -490,19 +461,13 @@ class Zebra_Session {
 		// append this to the end
 		$hash .= $this->security_code;
 
-		$result = $this->_mysql_query('
-
-			SELECT
-				session_data
-			FROM
-				' . $this->table_name . '
-			WHERE
-				session_id = "' . $this->_mysql_real_escape_string($session_id) . '" AND
-				session_expire > "' . time() . '" AND
-				hash = "' . $this->_mysql_real_escape_string(md5($hash)) . '"
-			LIMIT 1
-
-		');
+		$sql = sprintf('SELECT session_data FROM %s WHERE session_id = "%s" AND session_expire > "%s" AND hash = "%s" LIMIT 1', 
+			$this->table_name, 
+			$this->_mysql_real_escape_string($session_id), 
+			time(), 
+			$this->_mysql_real_escape_string(md5($hash))
+			);
+		$result = $this->_mysql_query($sql);
 
 		// if anything was found
 		if ($result && mysqli_num_rows($result) > 0) {
@@ -517,7 +482,6 @@ class Zebra_Session {
 
 		// on error return an empty string - this HAS to be an empty string
 		return '';
-
 	}
 
 	/**
@@ -542,7 +506,6 @@ class Zebra_Session {
 	 *  @return void
 	 */
 	public function regenerate_id() {
-
 		// regenerates the id (create a new session with a new id and containing the data from the old session)
 		// also, delete the old session
 		session_regenerate_id(true);
@@ -589,7 +552,6 @@ class Zebra_Session {
 	 *  @return void
 	 */
 	public function set_flashdata($name, $value) {
-
 		// set session variable
 		$_SESSION[$name] = $value;
 
@@ -623,7 +585,6 @@ class Zebra_Session {
 	 *  @return void
 	 */
 	public function stop() {
-
 		// if a cookie is used to pass the session id
 		if (ini_get('session.use_cookies')) {
 
@@ -638,7 +599,6 @@ class Zebra_Session {
 		// destroy the session
 		session_unset();
 		session_destroy();
-
 	}
 
 	/**
@@ -647,31 +607,21 @@ class Zebra_Session {
 	 *  @access private
 	 */
 	function write($session_id, $session_data) {
-
 		// insert OR update session's data - this is how it works:
 		// first it tries to insert a new row in the database BUT if session_id is already in the database then just
 		// update session_data and session_expire for that specific session_id
 		// read more here http://dev.mysql.com/doc/refman/4.1/en/insert-on-duplicate.html
-		$result = $this->_mysql_query('
-
-			INSERT INTO
-				' . $this->table_name . ' (
-					session_id,
-					hash,
-					session_data,
-					session_expire
-				)
-			VALUES (
-				"' . $this->_mysql_real_escape_string($session_id) . '",
-				"' . $this->_mysql_real_escape_string(md5(($this->lock_to_user_agent && isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '') . ($this->lock_to_ip && isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '') . $this->security_code)) . '",
-				"' . $this->_mysql_real_escape_string($session_data) . '",
-				"' . $this->_mysql_real_escape_string(time() + $this->session_lifetime) . '"
-			)
-			ON DUPLICATE KEY UPDATE
-				session_data = "' . $this->_mysql_real_escape_string($session_data) . '",
-				session_expire = "' . $this->_mysql_real_escape_string(time() + $this->session_lifetime) . '"
-
-		');
+		$sql = sprintf('INSERT INTO %s (session_id,hash,session_data,session_expire ) VALUES ("%s","%s","%s","%s")
+			ON DUPLICATE KEY UPDATE session_data = "%s", session_expire = "%s"', 
+			$this->table_name,
+			$this->_mysql_real_escape_string($session_id),
+			$this->_mysql_real_escape_string(md5(($this->lock_to_user_agent && isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '') . ($this->lock_to_ip && isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '') . $this->security_code)),
+			$this->_mysql_real_escape_string($session_data),
+			$this->_mysql_real_escape_string(time() + $this->session_lifetime),
+			$this->_mysql_real_escape_string($session_data),
+			$this->_mysql_real_escape_string(time() + $this->session_lifetime)
+			);
+		$result = $this->_mysql_query($sql);
 
 		// if anything happened, return TRUE
 		// if something went wrong, return false
@@ -685,7 +635,6 @@ class Zebra_Session {
 	 *  @access private
 	 */
 	function _manage_flashdata() {
-
 		// if there is flashdata to be handled
 		if (!empty($this->flashdata)) {
 
@@ -713,9 +662,7 @@ class Zebra_Session {
 
 				// store data in a temporary session variable
 				$_SESSION[$this->flashdata_varname] = serialize($this->flashdata);
-
 		}
-
 	}
 
 	/**
