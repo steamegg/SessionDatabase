@@ -370,53 +370,6 @@ class Zebra_Session {
 	}
 
 	/**
-	 *  Queries the system for the values of <i>session.gc_maxlifetime</i>, <i>session.gc_probability</i> and <i>session.gc_divisor</i>
-	 *  and returns them as an associative array.
-	 *
-	 *  To view the result in a human-readable format use:
-	 *  <code>
-	 *  //  include the class
-	 *  require 'path/to/Zebra_Session.php';
-	 *
-	 *  //  instantiate the class
-	 *  $session = new Zebra_Session();
-	 *
-	 *  //  get default settings
-	 *  print_r('<pre>');
-	 *  print_r($session->get_settings());
-	 *
-	 *  //  would output something similar to (depending on your actual settings)
-	 *  //  Array
-	 *  //  (
-	 *  //	  [session.gc_maxlifetime] => 1440 seconds (24 minutes)
-	 *  //	  [session.gc_probability] => 1
-	 *  //	  [session.gc_divisor] => 1000
-	 *  //	  [probability] => 0.1%
-	 *  //  )
-	 *  </code>
-	 *
-	 *  @since 1.0.8
-	 *
-	 *  @return array   Returns the values of <i>session.gc_maxlifetime</i>, <i>session.gc_probability</i> and <i>session.gc_divisor</i>
-	 *				  as an associative array.
-	 *
-	 */
-	public function get_settings() {
-		// get the settings
-		$gc_maxlifetime = ini_get('session.gc_maxlifetime');
-		$gc_probability = ini_get('session.gc_probability');
-		$gc_divisor	 = ini_get('session.gc_divisor');
-
-		// return them as an array
-		return array(
-			'session.gc_maxlifetime'	=>  $gc_maxlifetime . ' seconds (' . round($gc_maxlifetime / 60) . ' minutes)',
-			'session.gc_probability'	=>  $gc_probability,
-			'session.gc_divisor'		=>  $gc_divisor,
-			'probability'			   =>  $gc_probability / $gc_divisor * 100 . '%',
-		);
-	}
-
-	/**
 	 *  Custom open() function
 	 *
 	 *  @access private
