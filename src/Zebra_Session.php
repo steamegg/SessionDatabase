@@ -16,8 +16,6 @@ namespace steamegg\Slim\SessionMysql;
  */
 class Zebra_Session {
 
-	private $flashdata;
-	private $flashdata_varname;
 	private $session_lifetime;
 	private $link;
 	private $lock_timeout;
@@ -269,28 +267,6 @@ class Zebra_Session {
 			// start the session
 			session_start();
 
-			// the name for the session variable that will be created upon script execution
-			// and destroyed when instantiating this library, and which will hold information
-			// about flashdata session variables
-			$this->flashdata_varname = '_zebra_session_flashdata_ec3asbuiad';
-
-			// assume no flashdata
-			$this->flashdata = array();
-
-			// if there are any flashdata variables that need to be handled
-			if (isset($_SESSION[$this->flashdata_varname])) {
-
-				// store them
-				$this->flashdata = unserialize($_SESSION[$this->flashdata_varname]);
-
-				// and destroy the temporary session variable
-				unset($_SESSION[$this->flashdata_varname]);
-
-			}
-
-			// handle flashdata after script execution
-			register_shutdown_function(array($this, '_manage_flashdata'));
-
 		// if no MySQL connections could be found
 		// trigger a fatal error message and stop execution
 		} else trigger_error('Zebra_Session: No MySQL connection!', E_USER_ERROR);
@@ -467,54 +443,6 @@ class Zebra_Session {
 	}
 
 	/**
-	 *  Sets a "flashdata" session variable which will only be available for the next server request, and which will be
-	 *  automatically deleted afterwards.
-	 *
-	 *  Typically used for informational or status messages (for example: "data has been successfully updated").
-	 *
-	 *  <code>
-	 *  // first, connect to a database containing the sessions table
-	 *
-	 *  // include the library
-	 *  require 'path/to/Zebra_Session.php';
-	 *
-	 *  //  start the session
-	 *  //  where $link is a connection link returned by mysqli_connect
-	 *  $session = new Zebra_Session($link, 'sEcUr1tY_c0dE');
-	 *
-	 *  // set "myvar" which will only be available
-	 *  // for the next server request and will be
-	 *  // automatically deleted afterwards
-	 *  $session->set_flashdata('myvar', 'myval');
-	 *  </code>
-	 *
-	 *  Flashdata session variables can be retrieved like any other session variable:
-	 *
-	 *  <code>
-	 *  if (isset($_SESSION['myvar'])) {
-	 *	  // do something here but remember that the
-	 *	  // flashdata session variable is available
-	 *	  // for a single server request after it has
-	 *	  // been set!
-	 *  }
-	 *  </code>
-	 *
-	 *  @param  string  $name   The name of the session variable.
-	 *
-	 *  @param  string  $value  The value of the session variable.
-	 *
-	 *  @return void
-	 */
-	public function set_flashdata($name, $value) {
-		// set session variable
-		$_SESSION[$name] = $value;
-
-		// initialize the counter for this flashdata
-		$this->flashdata[$name] = 0;
-
-	}
-
-	/**
 	 *  Deletes all data related to the session.
 	 *
 	 *  <i>This method runs the garbage collector respecting your environment's garbage collector-related properties.
@@ -581,42 +509,6 @@ class Zebra_Session {
 		// if something went wrong, return false
 		return $result ? true : false;
 
-	}
-
-	/**
-	 *  Manages flashdata behind the scenes
-	 *
-	 *  @access private
-	 */
-	function _manage_flashdata() {
-		// if there is flashdata to be handled
-		if (!empty($this->flashdata)) {
-
-			// iterate through all the entries
-			foreach ($this->flashdata as $variable => $counter) {
-
-				// increment counter representing server requests
-				$this->flashdata[$variable]++;
-
-				// if we're past the first server request
-				if ($this->flashdata[$variable] > 1) {
-
-					// unset the session variable
-					unset($_SESSION[$variable]);
-
-					// stop tracking
-					unset($this->flashdata[$variable]);
-
-				}
-
-			}
-
-			// if there is any flashdata left to be handled
-			if (!empty($this->flashdata))
-
-				// store data in a temporary session variable
-				$_SESSION[$this->flashdata_varname] = serialize($this->flashdata);
-		}
 	}
 
 	/**
