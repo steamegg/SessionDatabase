@@ -17,7 +17,7 @@ use steamegg\Slim\SessionMysql\Connection\IConnection;
  *  @package	Zebra_Session
  */
 
-class Zebra_Session {
+class Zebra_Session implements \SessionHandlerInterface{
 
 	private $connection;
 	private $security_code;
@@ -105,15 +105,15 @@ class Zebra_Session {
 		return $this->connection->affectedRows() >= 0 ? TRUE : FALSE;
 	}
 
-	function gc() {
+	function gc($maxlifetime) {
 		$sql = sprintf('DELETE FROM %s WHERE session_expire < "%s"', 
 			$this->table_name, 
 			$this->connection->escape(time()));
 		$this->connection->query($sql);
 	}
 
-	function open() {
-		return true;
+	function open($save_path, $name){
+		return TRUE;
 	}
 
 	function read($session_id) {
