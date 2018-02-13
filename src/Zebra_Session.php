@@ -390,34 +390,6 @@ class Zebra_Session {
 	}
 
 	/**
-	 *  Regenerates the session id.
-	 *
-	 *  <b>Call this method whenever you do a privilege change in order to prevent session hijacking!</b>
-	 *
-	 *  <code>
-	 *  // first, connect to a database containing the sessions table
-	 *
-	 *  //  include the class
-	 *  require 'path/to/Zebra_Session.php';
-	 *
-	 *  //  start the session
-	 *  //  where $link is a connection link returned by mysqli_connect
-	 *  $session = new Zebra_Session($link, 'sEcUr1tY_c0dE');
-	 *
-	 *  //  regenerate the session's ID
-	 *  $session->regenerate_id();
-	 *  </code>
-	 *
-	 *  @return void
-	 */
-	public function regenerate_id() {
-		// regenerates the id (create a new session with a new id and containing the data from the old session)
-		// also, delete the old session
-		session_regenerate_id(true);
-
-	}
-
-	/**
 	 *  Custom write() function
 	 *
 	 *  @access private
