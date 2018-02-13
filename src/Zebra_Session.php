@@ -1,6 +1,8 @@
 <?php
 namespace steamegg\Slim\SessionMysql;
 
+use steamegg\Slim\SessionMysql\Connection\IConnection;
+
 /**
  *  A PHP library acting as a drop-in replacement for PHP's default session handler, but instead of storing session data
  *  in flat files it stores them in a MySQL database, providing better performance as well as better security and
@@ -17,11 +19,12 @@ namespace steamegg\Slim\SessionMysql;
 class Zebra_Session {
 
 	private $session_lifetime;
-	private $link;
+	private $connection;
 	private $lock_timeout;
 	private $lock_to_ip;
 	private $lock_to_user_agent;
 	private $table_name;
+	private $lockName;
 
 	/**
 	 *  Constructor of class. Initializes the class and automatically calls
@@ -58,7 +61,7 @@ class Zebra_Session {
 	 *
 	 *  From now on whenever PHP sets the 'PHPSESSID' cookie, the cookie will be available to all subdomains!
 	 *
-	 *  @param  resource	$link			   An object representing the connection to a MySQL Server, as returned
+	 *  @param  resource	$connection			   An object representing the connection to a MySQL Server, as returned
 	 *										  by calling {@link http://www.php.net/manual/en/mysqli.construct.php mysqli_connect}.
 	 *
 	 *										  If you use {@link http://stefangabos.ro/php-libraries/zebra-database/ Zebra_Database}
@@ -202,7 +205,7 @@ class Zebra_Session {
 	 *  @return void
 	 */
 	public function __construct(
-		&$link, 
+		IConnection &$connection, 
 		$security_code, 
 		$session_lifetime = NULL, 
 		$lock_to_user_agent = true, 
@@ -211,48 +214,44 @@ class Zebra_Session {
 		$gc_divisor = NULL, 
 		$table_name = 'session_data', 
 		$lock_timeout = 60) {
-
+		
 		// continue if the provided link is valid
-		if ($link instanceof MySQLi && $link->connect_error === null) {
+		if(!$connection->ping())
+			trigger_error("Connection ping failed", E_USER_ERROR);
 
-			// store the connection link
-			$this->link = $link;
-			
-			// we'll use this later on in order to try to prevent HTTP_USER_AGENT spoofing
-			$this->security_code = $security_code;
-			
-			// get session lifetime
-			$this->session_lifetime = $this->detectLifetime($session_lifetime);
-			
-			// some other defaults
-			$this->lock_to_user_agent = $lock_to_user_agent;
-			$this->lock_to_ip = $lock_to_ip;
-			
-			// the table to be used by the class
-			$this->table_name = $table_name;
-			
-			// the maximum amount of time (in seconds) for which a process can lock the session
-			$this->lock_timeout = $lock_timeout;
-			
-			$this->setIni($gc_probability, $gc_divisor);
+		// store the connection link
+		$this->connection = $connection;
+		
+		// we'll use this later on in order to try to prevent HTTP_USER_AGENT spoofing
+		$this->security_code = $security_code;
+		
+		// get session lifetime
+		$this->session_lifetime = $this->detectLifetime($session_lifetime);
+		
+		// some other defaults
+		$this->lock_to_user_agent = $lock_to_user_agent;
+		$this->lock_to_ip = $lock_to_ip;
+		
+		// the table to be used by the class
+		$this->table_name = $table_name;
+		
+		// the maximum amount of time (in seconds) for which a process can lock the session
+		$this->lock_timeout = $lock_timeout;
+		
+		$this->setIni($gc_probability, $gc_divisor);
 
-			// register the new handler
-			session_set_save_handler(
-				array(&$this, 'open'),
-				array(&$this, 'close'),
-				array(&$this, 'read'),
-				array(&$this, 'write'),
-				array(&$this, 'destroy'),
-				array(&$this, 'gc')
-			);
+		// register the new handler
+		session_set_save_handler(
+			array(&$this, 'open'),
+			array(&$this, 'close'),
+			array(&$this, 'read'),
+			array(&$this, 'write'),
+			array(&$this, 'destroy'),
+			array(&$this, 'gc')
+		);
 
-			// start the session
-			session_start();
-
-		// if no MySQL connections could be found
-		// trigger a fatal error message and stop execution
-		} else trigger_error('Zebra_Session: No MySQL connection!', E_USER_ERROR);
-
+		// start the session
+		session_start();
 	}
 	
 	protected function detectLifetime($lifetime){
@@ -289,9 +288,8 @@ class Zebra_Session {
 	 */
 	function close() {
 		// release the lock associated with the current session
-		$sql = sprintf('SELECT RELEASE_LOCK("%s")', $this->session_lock);
-		if ($this->_mysql_query($sql))
-			return true;
+		if($this->connection->releaseLock($this->lockName))
+			return TRUE;
 	}
 
 	/**
@@ -301,12 +299,13 @@ class Zebra_Session {
 	 */
 	function destroy($session_id) {
 		// delete the current session id from the database
-		$sql = sprintf('DELETE FROM %s WHERE session_id = "%s"', $this->table_name, $this->_mysql_real_escape_string($session_id));
-		$this->_mysql_query($sql);
+		$sql = sprintf('DELETE FROM %s WHERE session_id = "%s"', 
+			$this->table_name, 
+			$this->connection->escape($session_id));
+		$this->connection->query($sql);
 
 		// return true if everything went well
-		return ($this->_mysql_affected_rows() !== -1);
-
+		return $this->connection->affectedRows() >= 0 ? TRUE : FALSE;
 	}
 
 	/**
@@ -316,8 +315,10 @@ class Zebra_Session {
 	 */
 	function gc() {
 		// delete expired sessions from database
-		$sql = sprintf('DELETE FROM %s WHERE session_expire < "%s"', $this->table_name, $this->_mysql_real_escape_string(time()));
-		$this->_mysql_query($sql);
+		$sql = sprintf('DELETE FROM %s WHERE session_expire < "%s"', 
+			$this->table_name, 
+			$this->connection->escape(time()));
+		$this->connection->query($sql);
 	}
 
 	/**
@@ -336,14 +337,12 @@ class Zebra_Session {
 	 */
 	function read($session_id) {
 		// get the lock name, associated with the current session
-		$this->session_lock = $this->_mysql_real_escape_string('session_' . $session_id);
+		$this->lockName = sprintf("session_%s", $session_id);
 
 		// try to obtain a lock with the given name and timeout
-		$sql = sprintf('SELECT GET_LOCK("%s", %s)', $this->session_lock, $this->_mysql_real_escape_string($this->lock_timeout));
-		$result = $this->_mysql_query($sql);
-
 		// stop if there was an error
-		if (!$result || mysqli_num_rows($result) != 1 || !($row = mysqli_fetch_array($result)) || $row[0] != 1) die('Zebra_Session: Could not obtain session lock!');
+		if( !$this->connection->getLock($this->lockName, $this->lock_timeout) )
+			die("Could not obtain session lock");
 
 		//  reads session data associated with a session id, but only if
 		//  -   the session ID exists;
@@ -352,25 +351,14 @@ class Zebra_Session {
 		//  -   if lock_to_ip is TRUE and the host is the same as the one who had previously been associated with this particular session;
 		$sql = sprintf('SELECT session_data FROM %s WHERE session_id = "%s" AND session_expire > "%s" AND hash = "%s" LIMIT 1', 
 			$this->table_name, 
-			$this->_mysql_real_escape_string($session_id), 
+			$this->connection->escape($session_id), 
 			time(), 
-			$this->_mysql_real_escape_string($this->calculateHash())
+			$this->connection->escape($this->calculateHash())
 			);
-		$result = $this->_mysql_query($sql);
-
-		// if anything was found
-		if ($result && mysqli_num_rows($result) > 0) {
-
-			// return found data
-			$fields = mysqli_fetch_assoc($result);
-
-			// don't bother with the unserialization - PHP handles this automatically
-			return $fields['session_data'];
-
-		}
-
-		// on error return an empty string - this HAS to be an empty string
-		return '';
+		$result = $this->connection->query($sql);
+		
+		$row = $this->connection->fetchRow($result);
+		return isset($row["session_data"]) ? $row["session_data"] : "";
 	}
 	
 	protected function calculateHash(){
@@ -402,73 +390,17 @@ class Zebra_Session {
 		$sql = sprintf('INSERT INTO %s (session_id,hash,session_data,session_expire ) VALUES ("%s","%s","%s","%s")
 			ON DUPLICATE KEY UPDATE session_data = "%s", session_expire = "%s"', 
 			$this->table_name,
-			$this->_mysql_real_escape_string($session_id),
-			$this->_mysql_real_escape_string($this->calculateHash()),
-			$this->_mysql_real_escape_string($session_data),
-			$this->_mysql_real_escape_string(time() + $this->session_lifetime),
-			$this->_mysql_real_escape_string($session_data),
-			$this->_mysql_real_escape_string(time() + $this->session_lifetime)
+			$this->connection->escape($session_id),
+			$this->connection->escape($this->calculateHash()),
+			$this->connection->escape($session_data),
+			$this->connection->escape(time() + $this->session_lifetime),
+			$this->connection->escape($session_data),
+			$this->connection->escape(time() + $this->session_lifetime)
 			);
-		$result = $this->_mysql_query($sql);
+		$result = $this->connection->query($sql);
 
 		// if anything happened, return TRUE
 		// if something went wrong, return false
 		return $result ? true : false;
-
 	}
-
-	/**
-	 *  Wrapper for PHP's "mysqli_affected_rows" function.
-	 *
-	 *  @access private
-	 */
-	private function _mysql_affected_rows() {
-
-		// call "mysqli_affected_rows" and return the result
-		return mysqli_affected_rows($this->link);
-
-	}
-
-	/**
-	 *  Wrapper for PHP's "mysqli_error" function.
-	 *
-	 *  @access private
-	 */
-	private function _mysql_error() {
-
-		// call "mysqli_error" and return the result
-		return 'Zebra_Session: ' . mysqli_error($this->link);
-
-	}
-
-	/**
-	 *  Wrapper for PHP's "mysqli_query" function.
-	 *
-	 *  @access private
-	 */
-	private function _mysql_query($query) {
-
-		// call "mysqli_query"
-		$result = mysqli_query($this->link, $query)
-
-			// stop if there was an error
-			or die($this->_mysql_error());
-
-		// return the result if query was successful
-		return $result;
-
-	}
-
-	/**
-	 *  Wrapper for PHP's "mysqli_real_escape_string" function.
-	 *
-	 *  @access private
-	 */
-	private function _mysql_real_escape_string($string) {
-
-		// call "mysqli_real_escape_string" and return the result
-		return mysqli_real_escape_string($this->link, $string);
-
-	}
-
 }
