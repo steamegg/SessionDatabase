@@ -201,58 +201,40 @@ class Zebra_Session {
 	 *
 	 *  @return void
 	 */
-	public function __construct(&$link, $security_code, $session_lifetime = '', $lock_to_user_agent = true, $lock_to_ip = false, $gc_probability = '', $gc_divisor = '', $table_name = 'session_data', $lock_timeout = 60) {
+	public function __construct(
+		&$link, 
+		$security_code, 
+		$session_lifetime = NULL, 
+		$lock_to_user_agent = true, 
+		$lock_to_ip = false, 
+		$gc_probability = NULL, 
+		$gc_divisor = NULL, 
+		$table_name = 'session_data', 
+		$lock_timeout = 60) {
 
 		// continue if the provided link is valid
 		if ($link instanceof MySQLi && $link->connect_error === null) {
 
 			// store the connection link
 			$this->link = $link;
-
-			// make sure session cookies never expire so that session lifetime
-			// will depend only on the value of $session_lifetime
-			ini_set('session.cookie_lifetime', 0);
-
-			// tell the browser not to expose the cookie to client side scripting
-			// this makes it harder for an attacker to hijack the session ID
-			ini_set('session.cookie_httponly', 1);
-
-			// make sure that PHP only uses cookies for sessions and disallow session ID passing as a GET parameter
-			ini_set('session.use_only_cookies', 1);
-
-			// if $session_lifetime is specified and is an integer number
-			if ($session_lifetime != '' && is_integer($session_lifetime))
-
-				// set the new value
-				ini_set('session.gc_maxlifetime', (int)$session_lifetime);
-
-			// if $gc_probability is specified and is an integer number
-			if ($gc_probability != '' && is_integer($gc_probability))
-
-				// set the new value
-				ini_set('session.gc_probability', $gc_probability);
-
-			// if $gc_divisor is specified and is an integer number
-			if ($gc_divisor != '' && is_integer($gc_divisor))
-
-				// set the new value
-				ini_set('session.gc_divisor', $gc_divisor);
-
-			// get session lifetime
-			$this->session_lifetime = ini_get('session.gc_maxlifetime');
-
+			
 			// we'll use this later on in order to try to prevent HTTP_USER_AGENT spoofing
 			$this->security_code = $security_code;
-
+			
+			// get session lifetime
+			$this->session_lifetime = $this->detectLifetime($session_lifetime);
+			
 			// some other defaults
 			$this->lock_to_user_agent = $lock_to_user_agent;
 			$this->lock_to_ip = $lock_to_ip;
-
+			
 			// the table to be used by the class
 			$this->table_name = $table_name;
-
+			
 			// the maximum amount of time (in seconds) for which a process can lock the session
 			$this->lock_timeout = $lock_timeout;
+			
+			$this->setIni($gc_probability, $gc_divisor);
 
 			// register the new handler
 			session_set_save_handler(
@@ -271,6 +253,33 @@ class Zebra_Session {
 		// trigger a fatal error message and stop execution
 		} else trigger_error('Zebra_Session: No MySQL connection!', E_USER_ERROR);
 
+	}
+	
+	protected function detectLifetime($lifetime){
+		return is_numeric($lifetime) ? (int) $lifetime : ini_get('session.gc_maxlifetime');
+	}
+	
+	protected function setIni($gc_probability, $gc_divisor){
+		ini_set('session.gc_maxlifetime', $this->session_lifetime);
+		
+		// if $gc_probability is specified and is an integer number
+		if(is_numeric($gc_probability))
+			ini_set('session.gc_probability', (int)$gc_probability);
+		
+		// if $gc_divisor is specified and is an integer number
+		if (is_numeric($gc_divisor))
+			ini_set('session.gc_divisor', (int)$gc_divisor);
+		
+		// make sure session cookies never expire so that session lifetime
+		// will depend only on the value of $session_lifetime
+		ini_set('session.cookie_lifetime', 0);
+		
+		// tell the browser not to expose the cookie to client side scripting
+		// this makes it harder for an attacker to hijack the session ID
+		ini_set('session.cookie_httponly', 1);
+		
+		// make sure that PHP only uses cookies for sessions and disallow session ID passing as a GET parameter
+		ini_set('session.use_only_cookies', 1);
 	}
 
 	/**
