@@ -399,26 +399,11 @@ class Zebra_Session {
 		//  -   the session has not expired;
 		//  -   if lock_to_user_agent is TRUE and the HTTP_USER_AGENT is the same as the one who had previously been associated with this particular session;
 		//  -   if lock_to_ip is TRUE and the host is the same as the one who had previously been associated with this particular session;
-		$hash = '';
-
-		// if we need to identify sessions by also checking the user agent
-		if ($this->lock_to_user_agent && isset($_SERVER['HTTP_USER_AGENT']))
-
-			$hash .= $_SERVER['HTTP_USER_AGENT'];
-
-		// if we need to identify sessions by also checking the host
-		if ($this->lock_to_ip && isset($_SERVER['REMOTE_ADDR']))
-
-			$hash .= $_SERVER['REMOTE_ADDR'];
-
-		// append this to the end
-		$hash .= $this->security_code;
-
 		$sql = sprintf('SELECT session_data FROM %s WHERE session_id = "%s" AND session_expire > "%s" AND hash = "%s" LIMIT 1', 
 			$this->table_name, 
 			$this->_mysql_real_escape_string($session_id), 
 			time(), 
-			$this->_mysql_real_escape_string(md5($hash))
+			$this->_mysql_real_escape_string($this->calculateHash())
 			);
 		$result = $this->_mysql_query($sql);
 
@@ -435,6 +420,22 @@ class Zebra_Session {
 
 		// on error return an empty string - this HAS to be an empty string
 		return '';
+	}
+	
+	protected function calculateHash(){
+		$hash = '';
+		
+		// if we need to identify sessions by also checking the user agent
+		if ($this->lock_to_user_agent && isset($_SERVER['HTTP_USER_AGENT']))
+			$hash .= $_SERVER['HTTP_USER_AGENT'];
+			
+		// if we need to identify sessions by also checking the host
+		if ($this->lock_to_ip && isset($_SERVER['REMOTE_ADDR']))
+			$hash .= $_SERVER['REMOTE_ADDR'];
+			
+		// append this to the end
+		$hash .= $this->security_code;
+		return md5($hash);
 	}
 
 	/**
@@ -568,7 +569,7 @@ class Zebra_Session {
 			ON DUPLICATE KEY UPDATE session_data = "%s", session_expire = "%s"', 
 			$this->table_name,
 			$this->_mysql_real_escape_string($session_id),
-			$this->_mysql_real_escape_string(md5(($this->lock_to_user_agent && isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '') . ($this->lock_to_ip && isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '') . $this->security_code)),
+			$this->_mysql_real_escape_string($this->calculateHash()),
 			$this->_mysql_real_escape_string($session_data),
 			$this->_mysql_real_escape_string(time() + $this->session_lifetime),
 			$this->_mysql_real_escape_string($session_data),
