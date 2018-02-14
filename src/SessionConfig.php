@@ -1,5 +1,5 @@
 <?php
-namespace steamegg\Slim\SessionMysql;
+namespace steamegg\Slim\SessionDatabase;
 
 class SessionConfig {
 	private $security_code;

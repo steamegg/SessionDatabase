@@ -1,5 +1,5 @@
 <?php
-namespace steamegg\Slim\SessionMysql\Connection;
+namespace steamegg\Slim\SessionDatabase\Connection;
 
 class MysqliConnection implements IConnection {
 	protected $db;
