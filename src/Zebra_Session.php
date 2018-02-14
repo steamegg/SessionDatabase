@@ -115,26 +115,12 @@ class Zebra_Session implements \SessionHandlerInterface{
 			$this->config->getTable(), 
 			$this->connection->quote($session_id), 
 			$this->connection->quote(time()), 
-			$this->connection->quote($this->calculateHash())
+			$this->connection->quote($this->config->calculateHash())
 			);
 		$result = $this->connection->query($sql);
 		
 		$row = $this->connection->fetchRow($result);
 		return isset($row["session_data"]) ? $row["session_data"] : "";
-	}
-	
-	protected function calculateHash(){
-		$hash = '';
-		
-		if ($this->config->isLockToUseragent() && isset($_SERVER['HTTP_USER_AGENT']))
-			$hash .= $_SERVER['HTTP_USER_AGENT'];
-			
-		if ($this->config->isLockToIp() && isset($_SERVER['REMOTE_ADDR']))
-			$hash .= $_SERVER['REMOTE_ADDR'];
-			
-		$hash .= $this->config->getSecurityCode();
-		
-		return md5($hash);
 	}
 	
 	function write($session_id, $session_data) {
@@ -143,7 +129,7 @@ class Zebra_Session implements \SessionHandlerInterface{
 			ON DUPLICATE KEY UPDATE session_data = %s, session_expire = %s", 
 			$this->config->getTable(),
 			$this->connection->quote($session_id),
-			$this->connection->quote($this->calculateHash()),
+			$this->connection->quote($this->config->calculateHash()),
 			$this->connection->quote($session_data),
 			$this->connection->quote(time() + $this->config->getSessionLifetime()),
 			$this->connection->quote($session_data),

@@ -32,20 +32,8 @@ class SessionConfig {
 		$this->table = $table;
 	}
 	
-	function getSecurityCode(){
-		return $this->security_code;
-	}
-	
 	function getSessionLifetime(){
 		return $this->session_lifetime;
-	}
-	
-	function isLockToIp(){
-		return $this->lock_to_ip;
-	}
-	
-	function isLockToUseragent(){
-		return $this->lock_to_user_agent;
 	}
 	
 	function getGcProbability(){
@@ -58,5 +46,14 @@ class SessionConfig {
 	
 	function getTable(){
 		return $this->table;
+	}
+	
+	function calculateHash(){
+		$hash = sprintf("%s%s%s",
+			$this->lock_to_user_agent && isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : "",
+			$this->lock_to_ip && isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : "",
+			$this->security_code);
+		
+		return md5($hash);
 	}
 }
