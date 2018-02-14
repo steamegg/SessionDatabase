@@ -19,10 +19,14 @@
 
 ## Installation
 
-Download the latest version, unpack it, and load it in your project
-
+Library is not registered in packagist yet, you should create your own class autoloader.
 ```php
-require_once ('Zebra_Session.php');
+spl_autoload_register(function($class){
+	$file = strtr($class, "\\", DIRECTORY_SEPARATOR);
+	$fullpath = __DIR__."/".$file.".php";
+	if(file_exists($fullpath))
+		require_once($fullpath);
+});
 ```
 
 ## Install MySQL table
