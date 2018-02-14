@@ -15,10 +15,11 @@ interface IConnection {
 	function query($query);
 	
 	/**
+	 * Compatibility for PDO::quote, mysqli::real_escape_string
 	 * @param string $string
 	 * @return string
 	 */
-	function escape($string);
+	function quote($string);
 	
 	/**
 	 * @param string $name

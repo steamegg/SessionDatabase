@@ -97,18 +97,18 @@ class Zebra_Session implements \SessionHandlerInterface{
 	}
 
 	function destroy($session_id) {
-		$sql = sprintf('DELETE FROM %s WHERE session_id = "%s"', 
+		$sql = sprintf("DELETE FROM %s WHERE session_id = %s", 
 			$this->table_name, 
-			$this->connection->escape($session_id));
+			$this->connection->quote($session_id));
 		$this->connection->query($sql);
 
 		return $this->connection->affectedRows() >= 0 ? TRUE : FALSE;
 	}
 
 	function gc($maxlifetime) {
-		$sql = sprintf('DELETE FROM %s WHERE session_expire < "%s"', 
+		$sql = sprintf("DELETE FROM %s WHERE session_expire < %s", 
 			$this->table_name, 
-			$this->connection->escape(time()));
+			$this->connection->quote(time()));
 		$this->connection->query($sql);
 	}
 
@@ -122,11 +122,11 @@ class Zebra_Session implements \SessionHandlerInterface{
 		if( !$this->connection->getLock($this->lockName, $this->lock_timeout) )
 			die("Could not obtain session lock");
 
-		$sql = sprintf('SELECT session_data FROM %s WHERE session_id = "%s" AND session_expire > "%s" AND hash = "%s" LIMIT 1', 
+		$sql = sprintf("SELECT session_data FROM %s WHERE session_id = %s AND session_expire > %s AND hash = %s LIMIT 1", 
 			$this->table_name, 
-			$this->connection->escape($session_id), 
-			time(), 
-			$this->connection->escape($this->calculateHash())
+			$this->connection->quote($session_id), 
+			$this->connection->quote(time()), 
+			$this->connection->quote($this->calculateHash())
 			);
 		$result = $this->connection->query($sql);
 		
@@ -149,15 +149,15 @@ class Zebra_Session implements \SessionHandlerInterface{
 	
 	function write($session_id, $session_data) {
 		// insert OR update, read more here http://dev.mysql.com/doc/refman/4.1/en/insert-on-duplicate.html
-		$sql = sprintf('INSERT INTO %s (session_id,hash,session_data,session_expire ) VALUES ("%s","%s","%s","%s")
-			ON DUPLICATE KEY UPDATE session_data = "%s", session_expire = "%s"', 
+		$sql = sprintf("INSERT INTO %s (session_id,hash,session_data,session_expire) VALUES (%s,%s,%s,%s)
+			ON DUPLICATE KEY UPDATE session_data = %s, session_expire = %s", 
 			$this->table_name,
-			$this->connection->escape($session_id),
-			$this->connection->escape($this->calculateHash()),
-			$this->connection->escape($session_data),
-			$this->connection->escape(time() + $this->session_lifetime),
-			$this->connection->escape($session_data),
-			$this->connection->escape(time() + $this->session_lifetime)
+			$this->connection->quote($session_id),
+			$this->connection->quote($this->calculateHash()),
+			$this->connection->quote($session_data),
+			$this->connection->quote(time() + $this->session_lifetime),
+			$this->connection->quote($session_data),
+			$this->connection->quote(time() + $this->session_lifetime)
 			);
 		
 		$result = $this->connection->query($sql);

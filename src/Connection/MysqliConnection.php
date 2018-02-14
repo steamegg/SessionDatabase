@@ -20,7 +20,11 @@ class MysqliConnection implements IConnection {
 		return $this->db->query($query);
 	}
 	
-	function escape($string){
+	function quote($string){
+		return sprintf("'%s'", $this->escape($string));
+	}
+	
+	protected function escape($string){
 		return $this->db->real_escape_string($string);
 	}
 	
