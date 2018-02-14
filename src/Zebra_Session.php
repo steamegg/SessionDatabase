@@ -19,40 +19,37 @@ use steamegg\Slim\SessionMysql\Connection\IConnection;
 
 class Zebra_Session implements \SessionHandlerInterface{
 
+	/**
+	 * @var IConnection
+	 */
 	private $connection;
-	private $security_code;
-	private $session_lifetime;
+	
+	/**
+	 * @var SessionConfig
+	 */
+	private $config;
+	
+	/**
+	 * the maximum amount of time (in seconds) for which a process can lock the session
+	 * @var int
+	 */
 	private $lock_timeout;
-	private $lock_to_ip;
-	private $lock_to_user_agent;
-	private $table_name;
+	
+	/**
+	 * @var string
+	 */
 	private $lockName;
 	
-	public function __construct(
-		IConnection &$connection, 
-		$security_code, 
-		$session_lifetime = NULL, 
-		$lock_to_user_agent = true, 
-		$lock_to_ip = false, 
-		$gc_probability = NULL, 
-		$gc_divisor = NULL, 
-		$table_name = 'session_data', 
-		$lock_timeout = 60) {
+	public function __construct(IConnection &$connection, SessionConfig $config, $lock_timeout = 60) {
 		
 		if(!$connection->ping())
 			trigger_error("Connection ping failed", E_USER_ERROR);
 
 		$this->connection = $connection;
-		$this->security_code = $security_code;
-		$this->session_lifetime = $this->detectLifetime($session_lifetime);
-		$this->lock_to_user_agent = $lock_to_user_agent;
-		$this->lock_to_ip = $lock_to_ip;
-		$this->table_name = $table_name;
-		
-		// the maximum amount of time (in seconds) for which a process can lock the session
+		$this->config = $config;
 		$this->lock_timeout = $lock_timeout;
 		
-		$this->setIni($gc_probability, $gc_divisor);
+		$this->setIni($this->config);
 
 		session_set_save_handler(
 			array(&$this, 'open'),
@@ -66,18 +63,10 @@ class Zebra_Session implements \SessionHandlerInterface{
 		session_start();
 	}
 	
-	protected function detectLifetime($lifetime){
-		return is_numeric($lifetime) ? (int) $lifetime : ini_get('session.gc_maxlifetime');
-	}
-	
-	protected function setIni($gc_probability, $gc_divisor){
-		ini_set('session.gc_maxlifetime', $this->session_lifetime);
-		
-		if(is_numeric($gc_probability))
-			ini_set('session.gc_probability', (int)$gc_probability);
-		
-		if (is_numeric($gc_divisor))
-			ini_set('session.gc_divisor', (int)$gc_divisor);
+	protected function setIni(SessionConfig $config){
+		ini_set('session.gc_maxlifetime', $config->getSessionLifetime());
+		ini_set('session.gc_probability', $config->getGcProbability());
+		ini_set('session.gc_divisor', $config->getGcDivisor());
 		
 		// make sure session cookies never expire so that session lifetime
 		// will depend only on the value of $session_lifetime
@@ -98,7 +87,7 @@ class Zebra_Session implements \SessionHandlerInterface{
 
 	function destroy($session_id) {
 		$sql = sprintf("DELETE FROM %s WHERE session_id = %s", 
-			$this->table_name, 
+			$this->config->getTable(), 
 			$this->connection->quote($session_id));
 		$this->connection->query($sql);
 
@@ -107,7 +96,7 @@ class Zebra_Session implements \SessionHandlerInterface{
 
 	function gc($maxlifetime) {
 		$sql = sprintf("DELETE FROM %s WHERE session_expire < %s", 
-			$this->table_name, 
+			$this->config->getTable(), 
 			$this->connection->quote(time()));
 		$this->connection->query($sql);
 	}
@@ -123,7 +112,7 @@ class Zebra_Session implements \SessionHandlerInterface{
 			die("Could not obtain session lock");
 
 		$sql = sprintf("SELECT session_data FROM %s WHERE session_id = %s AND session_expire > %s AND hash = %s LIMIT 1", 
-			$this->table_name, 
+			$this->config->getTable(), 
 			$this->connection->quote($session_id), 
 			$this->connection->quote(time()), 
 			$this->connection->quote($this->calculateHash())
@@ -137,13 +126,14 @@ class Zebra_Session implements \SessionHandlerInterface{
 	protected function calculateHash(){
 		$hash = '';
 		
-		if ($this->lock_to_user_agent && isset($_SERVER['HTTP_USER_AGENT']))
+		if ($this->config->isLockToUseragent() && isset($_SERVER['HTTP_USER_AGENT']))
 			$hash .= $_SERVER['HTTP_USER_AGENT'];
 			
-		if ($this->lock_to_ip && isset($_SERVER['REMOTE_ADDR']))
+		if ($this->config->isLockToIp() && isset($_SERVER['REMOTE_ADDR']))
 			$hash .= $_SERVER['REMOTE_ADDR'];
 			
-		$hash .= $this->security_code;
+		$hash .= $this->config->getSecurityCode();
+		
 		return md5($hash);
 	}
 	
@@ -151,13 +141,13 @@ class Zebra_Session implements \SessionHandlerInterface{
 		// insert OR update, read more here http://dev.mysql.com/doc/refman/4.1/en/insert-on-duplicate.html
 		$sql = sprintf("INSERT INTO %s (session_id,hash,session_data,session_expire) VALUES (%s,%s,%s,%s)
 			ON DUPLICATE KEY UPDATE session_data = %s, session_expire = %s", 
-			$this->table_name,
+			$this->config->getTable(),
 			$this->connection->quote($session_id),
 			$this->connection->quote($this->calculateHash()),
 			$this->connection->quote($session_data),
-			$this->connection->quote(time() + $this->session_lifetime),
+			$this->connection->quote(time() + $this->config->getSessionLifetime()),
 			$this->connection->quote($session_data),
-			$this->connection->quote(time() + $this->session_lifetime)
+			$this->connection->quote(time() + $this->config->getSessionLifetime())
 			);
 		
 		$result = $this->connection->query($sql);
