@@ -3,28 +3,24 @@ namespace steamegg\Slim\SessionDatabase;
 
 class SessionConfig {
 	private $security_code;
-	private $user_agent;
+	private $fingerprint;
 	private $session_lifetime;
-	private $ip;
 	private $gc_probability;
 	private $gc_divisor;
 	private $table;
 	
 	function __construct(
 		$security_code,
-		$user_agent,
+		$fingerprint,
 		$session_lifetime = NULL,
-		$ip = NULL,
 		$gc_probability = NULL,
 		$gc_divisor = NULL,
 		$table = 'session_data'){
 		
 		$this->security_code = $security_code;
-		$this->user_agent = $user_agent;
+		$this->fingerprint = $fingerprint;
 		
 		$this->session_lifetime = is_numeric($session_lifetime) ? (int) $session_lifetime : ini_get('session.gc_maxlifetime');
-		
-		$this->ip = $ip;
 		
 		$this->gc_probability = is_numeric($gc_probability) ? (int) $gc_probability : ini_get('session.gc_probability');
 		$this->gc_divisor = is_numeric($gc_divisor) ? (int) $gc_divisor : ini_get('session.gc_divisor');
@@ -49,12 +45,7 @@ class SessionConfig {
 	}
 	
 	function calculateHash(){
-		$hash = sprintf("%s%s%s",
-			$this->security_code,
-			$this->user_agent ? $this->user_agent : "",
-			$this->ip ? $this->ip : ""
-			);
-		
+		$hash = sprintf("%s%s", $this->security_code, $this->fingerprint);
 		return md5($hash);
 	}
 }
