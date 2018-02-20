@@ -6,35 +6,35 @@ use steamegg\Slim\SessionDatabase\SessionConfig;
 class SessionConfigTest extends TestCase {
 	
 	function testSecurityCode(){
-		$config = new SessionConfig("code1");
+		$config = new SessionConfig("code1", "userAgent");
 		$this->assertAttributeEquals("code1", "security_code", $config);
 	}
 	
+	function testUserAgent(){
+		$config = new SessionConfig("code1", "userAgent");
+		$this->assertAttributeEquals("userAgent", "user_agent", $config);
+		
+		$config = new SessionConfig("code1", NULL);
+		$this->assertAttributeEquals(NULL, "user_agent", $config);
+	}
+	
 	function testSessionLifetime(){
-		$config = new SessionConfig("code1");
+		$config = new SessionConfig("code1", "userAgent");
 		$this->assertEquals(ini_get('session.gc_maxlifetime'), $config->getSessionLifetime());
 		
-		$config = new SessionConfig("code1", "notNumeric");
+		$config = new SessionConfig("code1", "userAgent", "notNumeric");
 		$this->assertEquals(ini_get('session.gc_maxlifetime'), $config->getSessionLifetime());
 		
-		$config = new SessionConfig("code1", 9999);
+		$config = new SessionConfig("code1", "userAgent", 9999);
 		$this->assertEquals(9999, $config->getSessionLifetime());
 	}
 	
-	function testLockToIp(){
-		$config = new SessionConfig("code1");
-		$this->assertAttributeEquals(FALSE, "lock_to_ip", $config);
+	function testIp(){
+		$config = new SessionConfig("code1", "userAgent");
+		$this->assertAttributeEquals(NULL, "ip", $config);
 		
-		$config = new SessionConfig("code1", NULL, TRUE);
-		$this->assertAttributeEquals(TRUE, "lock_to_ip", $config);
-	}
-	
-	function testLockToUserAgent(){
-		$config = new SessionConfig("code1");
-		$this->assertAttributeEquals(TRUE, "lock_to_user_agent", $config);
-		
-		$config = new SessionConfig("code1", NULL, NULL, FALSE);
-		$this->assertAttributeEquals(FALSE, "lock_to_user_agent", $config);
+		$config = new SessionConfig("code1", NULL, NULL, "1.2.3.4");
+		$this->assertAttributeEquals("1.2.3.4", "ip", $config);
 	}
 	
 	function testGc(){
@@ -52,7 +52,7 @@ class SessionConfigTest extends TestCase {
 	}
 	
 	function testTable(){
-		$config = new SessionConfig("code1");
+		$config = new SessionConfig("code1", "userAgent");
 		$this->assertEquals("session_data", $config->getTable());
 		
 		$config = new SessionConfig("code1", NULL, NULL, NULL, NULL, NULL, "table1");
@@ -60,11 +60,14 @@ class SessionConfigTest extends TestCase {
 	}
 	
 	function testHash(){
-		$config = new SessionConfig("code1");
-		$hash = md5(sprintf("%s", "code1"));
+		$config = new SessionConfig("code1", "userAgent");
+		$hash = md5(sprintf("%s%s", "code1", "userAgent"));
 		$this->assertEquals($hash, $config->calculateHash());
 		
-		$hash = md5(sprintf("%s", "invalideCode"));
+		$config = new SessionConfig("code1", "userAgent", NULL, "ip");
+		$hash = md5(sprintf("%s%s", "code1", "userAgent"));
 		$this->assertNotEquals($hash, $config->calculateHash());
+		$hash = md5(sprintf("%s%s%s", "code1", "userAgent", "ip"));
+		$this->assertEquals($hash, $config->calculateHash());
 	}
 }
