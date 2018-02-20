@@ -19,14 +19,19 @@
 
 ## Installation
 
-Library is not registered in packagist yet, you should create your own class autoloader.
-```php
-spl_autoload_register(function($class){
-	$file = strtr($class, "\\", DIRECTORY_SEPARATOR);
-	$fullpath = __DIR__."/".$file.".php";
-	if(file_exists($fullpath))
-		require_once($fullpath);
-});
+Library is not registered in packagist yet.
+
+> composer.json
+
+```json
+{
+    "repositories": [
+        { "type": "vcs", "url": "https://github.com/steamegg/Slim-SessionDatabase.git"}
+    ],
+    "require": {
+        "steamegg/Slim-SessionDatabase": "dev-develop"
+    }
+}
 ```
 
 ## Install MySQL table
@@ -52,7 +57,13 @@ use steamegg\Slim\SessionDatabase\SessionConfig;
 use steamegg\Slim\SessionDatabase\SessionDbHandler;
 
 $connection = new MysqliConnection(mysqli_connect("localhost","dbuser","password","test"));
-$config = new SessionConfig("SECURITY_CODE");
+$config = new SessionConfig(
+			"SECURITY", 
+			$_SERVER["HTTP_USER_AGENT"],
+			ini_get("session.gc_maxlifetime"),
+			ini_get("session.gc_probability"),
+			ini_get("session.gc_divisor")
+			);
 new SessionDbHandler($connection, $config);
 ```
 
@@ -63,6 +74,35 @@ use steamegg\Slim\SessionDatabase\SessionConfig;
 use steamegg\Slim\SessionDatabase\SessionDbHandler;
 
 $connection = new PdoMysqlConnection(new \PDO("mysql:dbname=test;host=localhost", "dbuser", "password"));
-$config = new SessionConfig("SECURITY_CODE");
+$config = new SessionConfig(
+			"SECURITY", 
+			$_SERVER["HTTP_USER_AGENT"],
+			ini_get("session.gc_maxlifetime"),
+			ini_get("session.gc_probability"),
+			ini_get("session.gc_divisor")
+			);
 new SessionDbHandler($connection, $config);
+```
+
+## Fingerprint
+> If you want to use user-agent only
+```php
+$config = new SessionConfig(
+			"SECURITY", 
+			$_SERVER["HTTP_USER_AGENT"],
+			ini_get("session.gc_maxlifetime"),
+			ini_get("session.gc_probability"),
+			ini_get("session.gc_divisor")
+			);
+```
+
+> If you want to use user-agent with ip
+```php
+$config = new SessionConfig(
+			"SECURITY", 
+			$_SERVER["HTTP_USER_AGENT"].$_SERVER["REMOTE_ADDR"],
+			ini_get("session.gc_maxlifetime"),
+			ini_get("session.gc_probability"),
+			ini_get("session.gc_divisor")
+			);
 ```
