@@ -12,18 +12,25 @@ class SessionConfig {
 	function __construct(
 		$security_code,
 		$fingerprint,
-		$session_lifetime = NULL,
-		$gc_probability = NULL,
-		$gc_divisor = NULL,
+		$session_lifetime,
+		$gc_probability,
+		$gc_divisor,
 		$table = 'session_data'){
 		
 		$this->security_code = $security_code;
 		$this->fingerprint = $fingerprint;
 		
-		$this->session_lifetime = is_numeric($session_lifetime) ? (int) $session_lifetime : ini_get('session.gc_maxlifetime');
+		if(!is_numeric($session_lifetime))
+			trigger_error("session_lifetime is not numeric", E_USER_ERROR);
+		$this->session_lifetime = $session_lifetime;
 		
-		$this->gc_probability = is_numeric($gc_probability) ? (int) $gc_probability : ini_get('session.gc_probability');
-		$this->gc_divisor = is_numeric($gc_divisor) ? (int) $gc_divisor : ini_get('session.gc_divisor');
+		if(!is_numeric($gc_probability))
+			trigger_error("gc_probability is not numeric", E_USER_ERROR);
+		$this->gc_probability = $gc_probability;
+		
+		if(!is_numeric($gc_divisor))
+			trigger_error("gc_divisor is not numeric", E_USER_ERROR);
+		$this->gc_divisor = $gc_divisor;
 		
 		$this->table = $table;
 	}
