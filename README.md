@@ -1,4 +1,4 @@
-# Slim-SessionDatabase
+# SessionDatabase
 
 ## Features
 
@@ -26,10 +26,10 @@ Library is not registered in packagist yet.
 ```json
 {
     "repositories": [
-        { "type": "vcs", "url": "https://github.com/steamegg/Slim-SessionDatabase.git"}
+        { "type": "vcs", "url": "https://github.com/steamegg/SessionDatabase.git"}
     ],
     "require": {
-        "steamegg/Slim-SessionDatabase": "dev-develop"
+        "steamegg/SessionDatabase": "dev-develop"
     }
 }
 ```
@@ -52,9 +52,9 @@ CREATE TABLE `session_data` (
 
 > Create database connection using Mysqli
 ```php
-use steamegg\Slim\SessionDatabase\Connection\MysqliConnection;
-use steamegg\Slim\SessionDatabase\SessionConfig;
-use steamegg\Slim\SessionDatabase\SessionDbHandler;
+use steamegg\SessionDatabase\Connection\MysqliConnection;
+use steamegg\SessionDatabase\SessionConfig;
+use steamegg\SessionDatabase\SessionDbHandler;
 
 $connection = new MysqliConnection(mysqli_connect("localhost","dbuser","password","test"));
 $config = new SessionConfig(
@@ -69,9 +69,9 @@ new SessionDbHandler($connection, $config);
 
 > Create database connection using PDO-Mysql
 ```php
-use steamegg\Slim\SessionDatabase\Connection\PdoMysqlConnection;
-use steamegg\Slim\SessionDatabase\SessionConfig;
-use steamegg\Slim\SessionDatabase\SessionDbHandler;
+use steamegg\SessionDatabase\Connection\PdoMysqlConnection;
+use steamegg\SessionDatabase\SessionConfig;
+use steamegg\SessionDatabase\SessionDbHandler;
 
 $connection = new PdoMysqlConnection(new \PDO("mysql:dbname=test;host=localhost", "dbuser", "password"));
 $config = new SessionConfig(

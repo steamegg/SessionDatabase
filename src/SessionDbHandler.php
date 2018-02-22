@@ -1,7 +1,7 @@
 <?php
-namespace steamegg\Slim\SessionDatabase;
+namespace steamegg\SessionDatabase;
 
-use steamegg\Slim\SessionDatabase\Connection\IConnection;
+use steamegg\SessionDatabase\Connection\IConnection;
 
 /**
  *  A PHP library acting as a drop-in replacement for PHP's default session handler, but instead of storing session data
@@ -20,7 +20,7 @@ use steamegg\Slim\SessionDatabase\Connection\IConnection;
  *  
  *  This is a fork of stefangabos/Zebra_Session.
  *  @author steamegg
- *  @package steamegg\Slim\SessionDatabase
+ *  @package steamegg\SessionDatabase
  */
 
 class SessionDbHandler implements \SessionHandlerInterface{

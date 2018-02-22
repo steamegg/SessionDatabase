@@ -1,9 +1,9 @@
 {
-    "name": "steamegg/Slim-SessionDatabase",
+    "name": "steamegg/SessionDatabase",
     "type": "library",
     "description": "A PHP library acting as a wrapper for PHP's default session handling functions which stores data in a MySQL database, providing both better performance and better security and protection against session fixation and session hijacking.",
     "keywords": ["session", "locking",  "fixation", "hijack", "mysqli", "mysql", "database"],
-    "homepage": "https://github.com/steamegg/Slim-SessionDatabase",
+    "homepage": "https://github.com/steamegg/SessionDatabase",
     "license": "LGPL-3.0",
     "authors": [
         {
@@ -24,9 +24,9 @@
         "phpunit/phpunit": "~4.8"
     },
     "autoload": {
-        "psr-4": {"steamegg\\Slim\\SessionDatabase\\": "src"}
+        "psr-4": {"steamegg\\SessionDatabase\\": "src"}
     },
     "autoload-dev": {
-        "psr-4": {"steamegg\\Slim\\SessionDatabase\\": "tests"}
+        "psr-4": {"steamegg\\SessionDatabase\\": "tests"}
     }
 }

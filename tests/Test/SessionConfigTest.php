@@ -1,7 +1,7 @@
 <?php
-namespace steamegg\Slim\SessionDatabase\Test;
+namespace steamegg\SessionDatabase\Test;
 
-use steamegg\Slim\SessionDatabase\SessionConfig;
+use steamegg\SessionDatabase\SessionConfig;
 
 class SessionConfigTest extends TestCase {
 	

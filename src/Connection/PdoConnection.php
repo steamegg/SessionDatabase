@@ -1,5 +1,5 @@
 <?php
-namespace steamegg\Slim\SessionDatabase\Connection;
+namespace steamegg\SessionDatabase\Connection;
 
 abstract class PdoConnection implements IConnection {
 	protected $pdo;
